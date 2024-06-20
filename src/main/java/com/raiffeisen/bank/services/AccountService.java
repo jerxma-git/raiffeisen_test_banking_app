@@ -1,6 +1,8 @@
 package com.raiffeisen.bank.services;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -61,6 +63,10 @@ public class AccountService {
         return accountRepository.findByAccountNumber(accountNumber).orElse(null);
     }
 
+    public Account getAccountById(Long id) {
+        return accountRepository.findById(id).orElse(null);
+    }
+
 
     public boolean closeAccountByAccountNumber(String accountNumber) {
         Account account = getAccountByAccountNumber(accountNumber);
@@ -72,4 +78,27 @@ public class AccountService {
         accountRepository.save(account);
         return true;        
     }
+
+    public boolean applyAccountBalanceDelta(String accountNumber, Double delta) {
+        Account account = getAccountByAccountNumber(accountNumber);
+        if (account == null) {
+            return false;
+        }
+        // TODO: implement non-negative check
+        account.setBalance(account.getBalance() + delta);
+        account.setUpdatedAt(LocalDateTime.now());
+        accountRepository.save(account);
+        return true;
+    }
+
+
+    public List<Account> getRecentAccounts(Long clientID, int limit) {
+        return accountRepository.findByClient_Id(clientID).stream()
+                .sorted(Comparator.comparing(Account::getUpdatedAt).reversed())
+                .limit(limit)
+                .toList();
+    }
+
+
+
 }
