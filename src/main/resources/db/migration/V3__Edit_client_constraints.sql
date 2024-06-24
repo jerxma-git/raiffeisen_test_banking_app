@@ -1,0 +1,9 @@
+ALTER TABLE clients
+    ALTER COLUMN first_name SET NOT NULL,
+    ALTER COLUMN last_name SET NOT NULL;
+
+ALTER TABLE clients
+    ALTER COLUMN email DROP NOT NULL;
+
+ALTER TABLE clients
+    DROP CONSTRAINT IF EXISTS clients_email_key;

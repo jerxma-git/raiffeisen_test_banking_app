@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.raiffeisen.bank.models.Client;
 import com.raiffeisen.bank.services.ClientService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/clients")
 public class ClientController {
@@ -26,7 +28,7 @@ public class ClientController {
 
 
     @PostMapping("/create")
-    public ResponseEntity<Client> createClient(@RequestBody Client client) {
+    public ResponseEntity<Client> createClient(@Valid @RequestBody Client client) {
         Client newClient = clientService.createClient(client);
         return ResponseEntity.status(HttpStatus.CREATED).body(newClient);
     }
