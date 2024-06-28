@@ -7,5 +7,5 @@ import com.raiffeisen.bank.models.Client;
 
 @Repository
 public interface ClientRepository extends JpaRepository<Client, Long> {
-    
+
 }

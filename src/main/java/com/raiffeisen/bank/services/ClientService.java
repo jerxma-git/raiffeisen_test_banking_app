@@ -16,7 +16,6 @@ public class ClientService { // simple client creation and retrieval
         this.clientRepository = clientRepository;
     }
 
-
     public Client createClient(Client client) {
         return clientRepository.save(client);
     }

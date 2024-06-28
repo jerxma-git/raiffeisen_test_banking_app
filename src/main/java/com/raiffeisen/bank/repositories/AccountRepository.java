@@ -12,5 +12,6 @@ import com.raiffeisen.bank.models.Account;
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
     Optional<Account> findByAccountNumber(String accountNumber);
+
     List<Account> findByClient_Id(Long clientId);
 }

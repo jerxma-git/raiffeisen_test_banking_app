@@ -16,8 +16,8 @@ import com.raiffeisen.bank.repositories.AccountRepository;
 
 @Service
 public class AccountService {
-    
-    private static final int ACCOUNT_NUMBER_LENGTH = 20; 
+
+    private static final int ACCOUNT_NUMBER_LENGTH = 20;
 
     private final AccountRepository accountRepository;
     private final ClientService clientService;
@@ -28,20 +28,19 @@ public class AccountService {
         this.clientService = clientService;
     }
 
-
     public Account openNewAccount(Long clientID) {
-        Client client = clientService.getClientById(clientID); 
+        Client client = clientService.getClientById(clientID);
         if (client == null) {
             return null;
         }
         Account account = Account.builder()
-            .client(client)
-            .accountNumber(generateUniqueAccountNumber())
-            .balance(Double.valueOf(0))
-            .status(AccountStatus.ACTIVE)
-            .createdAt(LocalDateTime.now())
-            .updatedAt(LocalDateTime.now())
-            .build();
+                .client(client)
+                .accountNumber(generateUniqueAccountNumber())
+                .balance(Double.valueOf(0))
+                .status(AccountStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
 
         accountRepository.save(account);
         return account;
@@ -67,7 +66,6 @@ public class AccountService {
         return accountRepository.findById(id).orElse(null);
     }
 
-
     public boolean closeAccountByAccountNumber(String accountNumber) {
         Account account = getAccountByAccountNumber(accountNumber);
         if (account == null || account.getStatus() == AccountStatus.CLOSED) {
@@ -76,7 +74,7 @@ public class AccountService {
         account.setStatus(AccountStatus.CLOSED);
         account.setUpdatedAt(LocalDateTime.now());
         accountRepository.save(account);
-        return true;        
+        return true;
     }
 
     public boolean applyAccountBalanceDelta(String accountNumber, Double delta) {
@@ -96,14 +94,11 @@ public class AccountService {
         return true;
     }
 
-
     public List<Account> getRecentAccounts(Long clientID, int limit) {
         return accountRepository.findByClient_Id(clientID).stream()
                 .sorted(Comparator.comparing(Account::getUpdatedAt).reversed())
                 .limit(limit)
                 .toList();
     }
-
-
 
 }

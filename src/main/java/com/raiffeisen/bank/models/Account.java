@@ -2,7 +2,6 @@ package com.raiffeisen.bank.models;
 
 import java.time.LocalDateTime;
 
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -31,7 +30,7 @@ public class Account {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name="client_id")
+    @JoinColumn(name = "client_id")
     private Client client;
 
     @Column(nullable = false, unique = true)

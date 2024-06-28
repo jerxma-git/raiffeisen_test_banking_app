@@ -20,9 +20,9 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "clients")
 public class Client {
-    
+
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NonNull

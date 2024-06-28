@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.raiffeisen.bank.models.Account;
 import com.raiffeisen.bank.services.AccountService;
 
-
 @RestController
 @RequestMapping("/api/accounts")
 public class AccountController {
@@ -29,7 +28,6 @@ public class AccountController {
     public AccountController(AccountService accountService) {
         this.accountService = accountService;
     }
-
 
     @PostMapping("/open")
     public ResponseEntity<Account> openNewAccount(@RequestBody Map<String, Long> requestBody) {
@@ -57,19 +55,19 @@ public class AccountController {
         return ResponseEntity.ok("Account closed successfully.");
     }
 
-
     @PutMapping("/deposit")
     public ResponseEntity<String> depositToAccount(@RequestBody Map<String, Object> requestBody) {
         String accountNumber = (String) requestBody.getOrDefault("accountNumber", null);
         Double amount = (Double) requestBody.getOrDefault("amount", null);
-        
+
         if (accountNumber == null || amount == null) {
             return ResponseEntity.badRequest().body("Missing arguments");
         }
-    
+
         boolean isSuccessful = accountService.applyAccountBalanceDelta(accountNumber, amount);
         if (!isSuccessful) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account with the provided account number doesn't exist");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Account with the provided account number doesn't exist");
         }
 
         return ResponseEntity.ok("Deposit successful");
@@ -79,21 +77,19 @@ public class AccountController {
     public ResponseEntity<String> withdrawFromAccount(@RequestBody Map<String, Object> requestBody) {
         String accountNumber = (String) requestBody.getOrDefault("accountNumber", null);
         Double amount = (Double) requestBody.getOrDefault("amount", null);
-        
+
         if (accountNumber == null || amount == null) {
             return ResponseEntity.badRequest().body("Missing arguments");
         }
-        
+
         boolean isSuccessful = accountService.applyAccountBalanceDelta(accountNumber, -amount);
         if (!isSuccessful) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account with the provided account number doesn't exist");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Account with the provided account number doesn't exist");
         }
 
         return ResponseEntity.ok("Withdrawal successful");
     }
-
-
-
 
     @GetMapping("/{id}")
     public ResponseEntity<Account> getAccountById(@PathVariable Long id) {
@@ -128,5 +124,4 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getRecentAccounts(clientID, limit));
     }
 
-    
 }
