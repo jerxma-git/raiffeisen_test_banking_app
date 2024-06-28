@@ -1,5 +1,6 @@
 package com.raiffeisen.bank;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,6 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import com.raiffeisen.bank.DTO.AccountDTO;
+import com.raiffeisen.bank.DTO.QueryAccountsRequest;
 import com.raiffeisen.bank.models.Account;
 import com.raiffeisen.bank.models.AccountStatus;
 import com.raiffeisen.bank.models.Client;
@@ -31,6 +33,8 @@ import com.raiffeisen.bank.services.ClientService;
 
 @SpringBootTest
 public class AccountServiceTest {
+
+    final LocalDateTime SAMPLE_DT = LocalDateTime.of(2024, 6, 10, 12, 0, 0);
 
     AccountService accountService;
 
@@ -62,15 +66,14 @@ public class AccountServiceTest {
                 .email("valzhmysh@mail.ru")
                 .build();
 
-        sampleAccounts = Stream.of(1L, 2L, 3L, 4L)
-                .map((Long id) -> Account.builder()
-                        // .id(id)
+        sampleAccounts = Stream.of(1, 2, 3, 4)
+                .map(i -> Account.builder()
                         .client(sampleClient)
-                        .accountNumber("num" + id)
-                        .balance(0.0)
+                        .accountNumber("num" + i)
+                        .balance(50.0 * i)
                         .status(AccountStatus.ACTIVE)
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
+                        .createdAt(SAMPLE_DT.minusMonths(i))
+                        .updatedAt(SAMPLE_DT.minusDays(i))
                         .build())
                 .collect(Collectors.toCollection(ArrayList::new));
 
@@ -86,6 +89,10 @@ public class AccountServiceTest {
                             .thenReturn(Optional.of(acc));
                     Mockito.when(accountRepository.findByAccountNumber(acc.getAccountNumber()))
                             .thenReturn(Optional.of(acc));
+                    Mockito.when(accountRepository.findByClient_IdAndStatusNot(sampleClient.getId(), AccountStatus.CLOSED))
+                            .thenReturn(sampleAccounts);
+                    Mockito.when(accountRepository.findByStatusNot(AccountStatus.CLOSED))
+                            .thenReturn(sampleAccounts);
                     return acc;
                 });
 
@@ -168,4 +175,42 @@ public class AccountServiceTest {
         assertEquals(sampleAccounts.get(2).getId(), recentAccounts.get(1).getId());
     }
 
+
+    // id=0:  acc=num1, bal= 50, cr = -1m, upd=-1d  
+    // id=1:  acc=num2, bal= 100, cr = -2m, upd=-2d 
+    // id=2:  acc=num3, bal= 150, cr = -3m, upd=-3d 
+    // id=3:  acc=num4, bal= 200, cr = -4m, upd=-4d 
+    @Test
+    void testQueryAccounts() {
+        List<QueryAccountsRequest> queries = List.of(
+            QueryAccountsRequest.builder()
+                .balanceLB(80.0)
+                .balanceUB(170.0)
+                .build(), // num2, num3
+            QueryAccountsRequest.builder()
+                .balanceLB(60.0)
+                .createdAtLB(SAMPLE_DT.minusMonths(2).minusHours(1))
+                .build(), // num2
+            QueryAccountsRequest.builder()
+                .clientID(sampleClient.getId())
+                .balanceUB(160.0)
+                .createdAtUB(SAMPLE_DT.minusMonths(1).minusHours(1))      
+                .updatedAtLB(SAMPLE_DT.minusDays(5))          
+                .build() // num2, num3
+        );
+
+        List<String[]> expectedResults = List.of(
+            new String[]{"num2", "num3"},
+            new String[]{"num2"},
+            new String[]{"num2", "num3"}
+        );
+
+        for (int queryNum = 0; queryNum < queries.size(); queryNum++) {
+            QueryAccountsRequest query = queries.get(queryNum);
+            String[] expectedResult = expectedResults.get(queryNum);
+            String[] result = accountService.queryAccountDTOs(query).stream().map(acc -> acc.getAccountNumber()).toArray(String[]::new);
+            assertArrayEquals(expectedResult, result);
+        }
+
+    }
 }
