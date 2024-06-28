@@ -19,6 +19,7 @@ import com.raiffeisen.bank.DTO.DepositToAccountRequest;
 import com.raiffeisen.bank.DTO.GetAccountByAccountNumberRequest;
 import com.raiffeisen.bank.DTO.GetRecentAccountsRequest;
 import com.raiffeisen.bank.DTO.OpenNewAccountRequest;
+import com.raiffeisen.bank.DTO.QueryAccountsRequest;
 import com.raiffeisen.bank.DTO.WithdrawFromAccountRequest;
 import com.raiffeisen.bank.services.AccountService;
 
@@ -102,6 +103,13 @@ public class AccountController {
         int limit = r.getLimit() != null ? r.getLimit() : DEFAULT_RECENTS_LIMIT;
 
         return ResponseEntity.ok(accountService.getRecentAccounts(r.getClientID(), limit));
+    }
+
+
+
+    @GetMapping("/query")
+    public ResponseEntity<List<AccountDTO>> queryAccounts(@RequestBody @Valid QueryAccountsRequest r) {
+        return ResponseEntity.ok(accountService.queryAccountDTOs(r));
     }
 
 }
