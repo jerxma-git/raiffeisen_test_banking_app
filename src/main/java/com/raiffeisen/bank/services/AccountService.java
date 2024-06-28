@@ -84,8 +84,13 @@ public class AccountService {
         if (account == null) {
             return false;
         }
-        // TODO: implement non-negative check
-        account.setBalance(account.getBalance() + delta);
+        // TODO: rework into exception
+        Double balance = account.getBalance();
+        if (balance + delta < 0) {
+            return false;
+        }
+
+        account.setBalance(balance + delta);
         account.setUpdatedAt(LocalDateTime.now());
         accountRepository.save(account);
         return true;

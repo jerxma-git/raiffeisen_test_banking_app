@@ -1,13 +1,23 @@
 package com.raiffeisen.bank;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +42,12 @@ public class AccountServiceTest {
 
     @MockBean
     ClientService clientService;
-    Client sampleClient = Client.builder()
-        .id(1L)
-        .lastName("Zhmyshenko")
-        .firstName("Valery")
-        .email("valzhmysh@mail.ru")
-        .build();
+
+
+    Client sampleClient;
+    List<Account> sampleAccounts;
+
+    Set<Long> savedAccountIDs;
 
     @Autowired
     public AccountServiceTest(AccountService accountService, AccountRepository accountRepository, ClientService clientService) {
@@ -46,25 +56,63 @@ public class AccountServiceTest {
         this.clientService = clientService;
     }
 
-    private Long assignNewAccountId() {
-        // TODO: assign unique id
-        return 1L;
-    }
 
-    @Test
-    void testOpenNewAccount() {
-        Mockito.when(clientService.getClientById(sampleClient.getId()))
-            .thenReturn(sampleClient);
+    @BeforeEach
+    void setUp() {
+        sampleClient = Client.builder()
+            .id(1L)
+            .lastName("Zhmyshenko")
+            .firstName("Valery")
+            .email("valzhmysh@mail.ru")
+            .build();
+
+        sampleAccounts = Stream.of(1L, 2L, 3L, 4L)
+            .map((Long id) -> Account.builder()
+                // .id(id)
+                .client(sampleClient)
+                .accountNumber("num" + id)
+                .balance(0.0)
+                .status(AccountStatus.ACTIVE)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build())
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        savedAccountIDs = new HashSet<>();
+        
         Mockito.when(accountRepository.save(Mockito.any(Account.class)))
             .thenAnswer(invocation -> {
                 Account acc = invocation.getArgument(0);
                 acc.setId(assignNewAccountId());
+                savedAccountIDs.add(acc.getId());
 
                 Mockito.when(accountRepository.findById(acc.getId()))
+                    .thenReturn(Optional.of(acc));
+                Mockito.when(accountRepository.findByAccountNumber(acc.getAccountNumber()))
                     .thenReturn(Optional.of(acc));
                 return acc;
             });
 
+        sampleAccounts.forEach(accountRepository::save);
+        Mockito.when(clientService.getClientById(sampleClient.getId())).thenReturn(sampleClient);
+        Mockito.when(accountRepository.findByClient_Id(Mockito.anyLong()))
+            .thenAnswer(invocation -> {
+                Long clientID = invocation.getArgument(0);
+                return sampleAccounts.stream()
+                    .filter(account -> 
+                            account.getClient().getId() == clientID 
+                            && savedAccountIDs.contains(account.getId()))
+                    .toList();
+        });
+    }
+
+
+    private Long assignNewAccountId() {
+        return savedAccountIDs.size() + 1L;
+    }
+
+    @Test
+    void testOpenNewAccount() {
         Account acc = accountService.openNewAccount(sampleClient.getId());
 
         assertNotNull(acc);
@@ -77,34 +125,56 @@ public class AccountServiceTest {
 
     @Test
     void testCloseAccountByAccountNumber() {
-        List<Account> accounts = Stream.of(1L, 2L, 3L, 4L)
-            .map((Long id) -> Account.builder()
-                    .id(id)
-                    .client(sampleClient) 
-                    .accountNumber("num" + id.toString())
-                    .balance(0.0)
-                    .status(AccountStatus.ACTIVE)
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
-                    .build())
-            .toList();
-        accounts.forEach(account -> {
-            Mockito.when(accountRepository.findById(account.getId()))
-                .thenReturn(Optional.of(account));
-            Mockito.when(accountRepository.findByAccountNumber(account.getAccountNumber()))
-                .thenReturn(Optional.of(account));
-        });
-
         List<String> accNumsToClose = List.of(
-            accounts.get(1).getAccountNumber(),
-            accounts.get(3).getAccountNumber());
+            sampleAccounts.get(1).getAccountNumber(),
+            sampleAccounts.get(3).getAccountNumber());
             
         accNumsToClose.forEach(num -> accountService.closeAccountByAccountNumber(num));
 
-        for (Account acc : accounts) {
+        for (Account acc : sampleAccounts) {
             boolean shouldBeClosed = accNumsToClose.contains(acc.getAccountNumber());
-            assertEquals(acc.getStatus() == AccountStatus.CLOSED, shouldBeClosed);
+            assertEquals(shouldBeClosed ? AccountStatus.CLOSED : AccountStatus.ACTIVE, acc.getStatus());
         }
+    }
+
+
+    @Test
+    void testApplyAccountBalanceDelta() {
+        Account acc = sampleAccounts.get(0);
+        Double initialBalance = 0.0;
+        acc.setBalance(initialBalance);
+        Double delta1 = 200.0;
+        Double delta2 = -150.01;
+        boolean result;
+
+        result = accountService.applyAccountBalanceDelta(acc.getAccountNumber(), delta1);
+        assertTrue(result);
+        assertEquals(acc.getBalance(), initialBalance + delta1, 0.0001);
+
+        result = accountService.applyAccountBalanceDelta(acc.getAccountNumber(), delta2);
+        assertTrue(result);
+        assertEquals(acc.getBalance(), initialBalance + delta1 + delta2, 0.0001);
+
+        result = accountService.applyAccountBalanceDelta(acc.getAccountNumber(), delta2);
+        assertFalse(result);
+    }
+
+    @Test
+    void testGetRecentAccounts() {
+        int limit = 2;
+        sampleAccounts.get(0).setUpdatedAt(LocalDateTime.now().plusMinutes(1));
+        sampleAccounts.get(1).setUpdatedAt(LocalDateTime.now().plusHours(1));
+
+        List<Account> recentAccounts = accountService.getRecentAccounts(sampleClient.getId(), limit);
+        assertEquals(2, recentAccounts.size());
+        assertEquals(sampleAccounts.get(1).getId(), recentAccounts.get(0).getId());
+        assertEquals( sampleAccounts.get(0).getId(), recentAccounts.get(1).getId());
+
+        sampleAccounts.get(2).setUpdatedAt(LocalDateTime.now().plusMinutes(30));
+        recentAccounts = accountService.getRecentAccounts(sampleClient.getId(), limit);
+        assertEquals(2, recentAccounts.size());
+        assertEquals(sampleAccounts.get(1).getId(), recentAccounts.get(0).getId());
+        assertEquals(sampleAccounts.get(2).getId(), recentAccounts.get(1).getId());
     }
 
 
