@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import com.raiffeisen.bank.DTO.AccountDTO;
 import com.raiffeisen.bank.models.Account;
 import com.raiffeisen.bank.models.AccountStatus;
 import com.raiffeisen.bank.models.Client;
@@ -106,14 +107,12 @@ public class AccountServiceTest {
 
     @Test
     void testOpenNewAccount() {
-        Account acc = accountService.openNewAccount(sampleClient.getId());
+        AccountDTO acc = accountService.openNewAccount(sampleClient.getId());
 
         assertNotNull(acc);
         assertNotNull(acc.getId());
-        Client client = acc.getClient();
-        assertNotNull(client);
-        assertNotNull(client.getId());
-        assertEquals(sampleClient.getId(), client.getId());
+        assertNotNull(acc.getClientID());
+        assertEquals(sampleClient.getId(), acc.getClientID());
     }
 
     @Test
@@ -157,7 +156,7 @@ public class AccountServiceTest {
         sampleAccounts.get(0).setUpdatedAt(LocalDateTime.now().plusMinutes(1));
         sampleAccounts.get(1).setUpdatedAt(LocalDateTime.now().plusHours(1));
 
-        List<Account> recentAccounts = accountService.getRecentAccounts(sampleClient.getId(), limit);
+        List<AccountDTO> recentAccounts = accountService.getRecentAccounts(sampleClient.getId(), limit);
         assertEquals(2, recentAccounts.size());
         assertEquals(sampleAccounts.get(1).getId(), recentAccounts.get(0).getId());
         assertEquals(sampleAccounts.get(0).getId(), recentAccounts.get(1).getId());

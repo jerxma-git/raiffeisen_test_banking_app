@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.raiffeisen.bank.DTO.AccountDTO;
 import com.raiffeisen.bank.models.Account;
 import com.raiffeisen.bank.models.AccountStatus;
 import com.raiffeisen.bank.models.Client;
@@ -28,7 +29,7 @@ public class AccountService {
         this.clientService = clientService;
     }
 
-    public Account openNewAccount(Long clientID) {
+    public AccountDTO openNewAccount(Long clientID) {
         Client client = clientService.getClientById(clientID);
         if (client == null) {
             return null;
@@ -43,7 +44,7 @@ public class AccountService {
                 .build();
 
         accountRepository.save(account);
-        return account;
+        return mapToDTO(account);
     }
 
     private String generateUniqueAccountNumber() {
@@ -62,8 +63,18 @@ public class AccountService {
         return accountRepository.findByAccountNumber(accountNumber).orElse(null);
     }
 
+    public AccountDTO getAccountDTOByAccountNumber(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber).orElse(null);
+        return account == null ? null : mapToDTO(account);
+    }
+
     public Account getAccountById(Long id) {
         return accountRepository.findById(id).orElse(null);
+    }
+
+    public AccountDTO getAccountDTOById(Long id) {
+        Account account = accountRepository.findById(id).orElse(null);
+        return account == null ? null : mapToDTO(account);
     }
 
     public boolean closeAccountByAccountNumber(String accountNumber) {
@@ -71,6 +82,7 @@ public class AccountService {
         if (account == null || account.getStatus() == AccountStatus.CLOSED) {
             return false;
         }
+        // TODO: rework into exception or DTO
         account.setStatus(AccountStatus.CLOSED);
         account.setUpdatedAt(LocalDateTime.now());
         accountRepository.save(account);
@@ -82,7 +94,7 @@ public class AccountService {
         if (account == null) {
             return false;
         }
-        // TODO: rework into exception
+        // TODO: rework into exception or DTO
         Double balance = account.getBalance();
         if (balance + delta < 0) {
             return false;
@@ -94,11 +106,25 @@ public class AccountService {
         return true;
     }
 
-    public List<Account> getRecentAccounts(Long clientID, int limit) {
+    public List<AccountDTO> getRecentAccounts(Long clientID, int limit) {
         return accountRepository.findByClient_Id(clientID).stream()
                 .sorted(Comparator.comparing(Account::getUpdatedAt).reversed())
                 .limit(limit)
+                .map(this::mapToDTO)
                 .toList();
+    }
+
+
+    public AccountDTO mapToDTO(Account account) {
+        return AccountDTO.builder()
+            .id(account.getId())
+            .clientID(account.getClient().getId())
+            .accountNumber(account.getAccountNumber())
+            .balance(account.getBalance())
+            .status(account.getStatus())
+            .createdAt(account.getCreatedAt())
+            .updatedAt(account.getUpdatedAt())
+            .build();
     }
 
 }

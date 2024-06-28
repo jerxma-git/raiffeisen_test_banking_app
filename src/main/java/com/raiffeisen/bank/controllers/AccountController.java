@@ -1,7 +1,6 @@
 package com.raiffeisen.bank.controllers;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,8 +13,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.raiffeisen.bank.models.Account;
+import com.raiffeisen.bank.DTO.AccountDTO;
+import com.raiffeisen.bank.DTO.CloseAccountRequest;
+import com.raiffeisen.bank.DTO.DepositToAccountRequest;
+import com.raiffeisen.bank.DTO.GetAccountByAccountNumberRequest;
+import com.raiffeisen.bank.DTO.GetRecentAccountsRequest;
+import com.raiffeisen.bank.DTO.OpenNewAccountRequest;
+import com.raiffeisen.bank.DTO.WithdrawFromAccountRequest;
 import com.raiffeisen.bank.services.AccountService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/accounts")
@@ -30,41 +37,28 @@ public class AccountController {
     }
 
     @PostMapping("/open")
-    public ResponseEntity<Account> openNewAccount(@RequestBody Map<String, Long> requestBody) {
-        if (!requestBody.containsKey("clientID")) {
-            return ResponseEntity.badRequest().build();
-        }
-        Long clientID = requestBody.get("clientID");
-        Account opened = accountService.openNewAccount(clientID);
+    public ResponseEntity<AccountDTO> openNewAccount(@RequestBody @Valid OpenNewAccountRequest r) {
+
+        AccountDTO opened = accountService.openNewAccount(r.getClientID());
         if (opened == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(opened);
     }
 
     @PostMapping("/close")
-    public ResponseEntity<String> closeAccount(@RequestBody Map<String, String> requestBody) {
-        if (!requestBody.containsKey("accountNumber")) {
-            return ResponseEntity.badRequest().build();
-        }
-        String accountNumber = requestBody.get("accountNumber");
-        boolean isSuccessful = accountService.closeAccountByAccountNumber(accountNumber);
+    public ResponseEntity<String> closeAccount(@RequestBody @Valid CloseAccountRequest r) {
+        boolean isSuccessful = accountService.closeAccountByAccountNumber(r.getAccountNumber());
         if (!isSuccessful) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok("Account closed successfully.");
     }
 
     @PutMapping("/deposit")
-    public ResponseEntity<String> depositToAccount(@RequestBody Map<String, Object> requestBody) {
-        String accountNumber = (String) requestBody.getOrDefault("accountNumber", null);
-        Double amount = (Double) requestBody.getOrDefault("amount", null);
+    public ResponseEntity<String> depositToAccount(@RequestBody @Valid DepositToAccountRequest r) {
 
-        if (accountNumber == null || amount == null) {
-            return ResponseEntity.badRequest().body("Missing arguments");
-        }
-
-        boolean isSuccessful = accountService.applyAccountBalanceDelta(accountNumber, amount);
+        boolean isSuccessful = accountService.applyAccountBalanceDelta(r.getAccountNumber(), r.getAmount());
         if (!isSuccessful) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Account with the provided account number doesn't exist");
@@ -74,15 +68,8 @@ public class AccountController {
     }
 
     @PutMapping("/withdraw")
-    public ResponseEntity<String> withdrawFromAccount(@RequestBody Map<String, Object> requestBody) {
-        String accountNumber = (String) requestBody.getOrDefault("accountNumber", null);
-        Double amount = (Double) requestBody.getOrDefault("amount", null);
-
-        if (accountNumber == null || amount == null) {
-            return ResponseEntity.badRequest().body("Missing arguments");
-        }
-
-        boolean isSuccessful = accountService.applyAccountBalanceDelta(accountNumber, -amount);
+    public ResponseEntity<String> withdrawFromAccount(@RequestBody @Valid WithdrawFromAccountRequest r) {
+        boolean isSuccessful = accountService.applyAccountBalanceDelta(r.getAccountNumber(), -r.getAmount());
         if (!isSuccessful) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Account with the provided account number doesn't exist");
@@ -92,8 +79,8 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Account> getAccountById(@PathVariable Long id) {
-        Account account = accountService.getAccountById(id);
+    public ResponseEntity<AccountDTO> getAccountById(@PathVariable Long id) {
+        AccountDTO account = accountService.getAccountDTOById(id);
         if (account == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
@@ -101,12 +88,8 @@ public class AccountController {
     }
 
     @GetMapping("/by_number")
-    public ResponseEntity<Account> getAccountByAccountNumber(@RequestBody Map<String, String> requestBody) {
-        if (!requestBody.containsKey("accountNumber")) {
-            return ResponseEntity.badRequest().build();
-        }
-        String accountNumber = requestBody.get("accountNumber");
-        Account account = accountService.getAccountByAccountNumber(accountNumber);
+    public ResponseEntity<AccountDTO> getAccountByAccountNumber(@RequestBody @Valid GetAccountByAccountNumberRequest r) {
+        AccountDTO account = accountService.getAccountDTOByAccountNumber(r.getAccountNumber());
         if (account == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
@@ -114,14 +97,11 @@ public class AccountController {
     }
 
     @GetMapping("/recent")
-    public ResponseEntity<List<Account>> getRecentAccounts(@RequestBody Map<String, Object> requestBody) {
-        if (!requestBody.containsKey("clientID")) {
-            return ResponseEntity.badRequest().build();
-        }
-        Long clientID = ((Integer) requestBody.get("clientID")).longValue();
-        int limit = requestBody.containsKey("limit") ? (int) requestBody.get("limit") : DEFAULT_RECENTS_LIMIT;
+    public ResponseEntity<List<AccountDTO>> getRecentAccounts(@RequestBody @Valid GetRecentAccountsRequest r) {
 
-        return ResponseEntity.ok(accountService.getRecentAccounts(clientID, limit));
+        int limit = r.getLimit() != null ? r.getLimit() : DEFAULT_RECENTS_LIMIT;
+
+        return ResponseEntity.ok(accountService.getRecentAccounts(r.getClientID(), limit));
     }
 
 }

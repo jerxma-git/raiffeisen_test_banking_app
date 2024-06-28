@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.raiffeisen.bank.models.Client;
+import com.raiffeisen.bank.DTO.ClientDTO;
 import com.raiffeisen.bank.services.ClientService;
 
 import jakarta.validation.Valid;
@@ -27,14 +27,14 @@ public class ClientController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Client> createClient(@Valid @RequestBody Client client) {
-        Client newClient = clientService.createClient(client);
+    public ResponseEntity<ClientDTO> createClient(@RequestBody @Valid ClientDTO client) {
+        ClientDTO newClient = clientService.createClient(client);
         return ResponseEntity.status(HttpStatus.CREATED).body(newClient);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Client> getClient(@PathVariable Long id) {
-        Client client = clientService.getClientById(id);
+    public ResponseEntity<ClientDTO> getClient(@PathVariable Long id) {
+        ClientDTO client = clientService.getClientDTOById(id);
         if (client == null) {
             return ResponseEntity.notFound().build();
         }

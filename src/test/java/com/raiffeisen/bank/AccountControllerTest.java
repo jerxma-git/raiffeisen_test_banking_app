@@ -17,8 +17,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.raiffeisen.bank.DTO.AccountDTO;
 import com.raiffeisen.bank.controllers.AccountController;
-import com.raiffeisen.bank.models.Account;
 import com.raiffeisen.bank.models.AccountStatus;
 import com.raiffeisen.bank.models.Client;
 import com.raiffeisen.bank.services.AccountService;
@@ -50,9 +50,9 @@ public class AccountControllerTest {
 
     @Test
     void testOpenNewAccount() throws Exception {
-        Account freshAccount = Account.builder()
+        AccountDTO freshAccount = AccountDTO.builder()
                 .id(1L)
-                .client(sampleClient)
+                .clientID(sampleClient.getId())
                 .status(AccountStatus.ACTIVE)
                 .build();
         Mockito.when(accountService.openNewAccount(1L)).thenReturn(freshAccount);
@@ -67,10 +67,10 @@ public class AccountControllerTest {
 
     @Test
     void testCloseAccount() throws Exception {
-        Account closedAccount = Account.builder()
+        AccountDTO closedAccount = AccountDTO.builder()
                 .id(1L)
                 .accountNumber("01234567899876543210")
-                .client(sampleClient)
+                .clientID(sampleClient.getId())
                 .build();
         Mockito.when(accountService.closeAccountByAccountNumber(closedAccount.getAccountNumber()))
                 .thenReturn(true);
